@@ -189,7 +189,16 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
+        full_dim = [input_dim] + hidden_dims +[num_classes]
 
+        for i in range(self.num_layers):
+            
+            w_name = 'W' + str(i+1)
+            b_name = 'b' + str(i+1)
+
+            self.params[w_name] = weight_scale * np.random.randn(full_dim[i], full_dim[i+1])
+            self.params[b_name] = np.zeros(full_dim[i+1])
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -247,6 +256,26 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
 
+        self.cache_dict = {}
+        scores = X
+        for i in range(1,self.num_layers+1):
+            w_ind = 'W' + str(i)
+            b_ind = 'b' + str(i)
+            out1 = 'out' + str(i)
+            relu = 'relu' + str(i)
+            w = self.params[w_ind]
+            b = self.params[b_ind]
+            
+            if(i == self.num_layers):
+                scores,caches = affine_forward(scores, w,b)
+            else :
+                scores,caches = affine_forward(scores, w,b)
+                out_relu , caches_relu = relu_forward(scores)
+                self.cache_dict[relu] = caches_relu
+          
+            self.cache_dict[out1] = caches
+            
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -277,7 +306,24 @@ class FullyConnectedNet(object):
         # a factor of 0.5 to simplify the expression for the gradient.        #
         #                                                                     #
         #######################################################################
-        
+        loss, dsoft = softmax_loss(scores,y)
+
+        for i in range(self.num_layers,0,-1):
+            w_ind = 'W' + str(i)
+            b_ind = 'b' + str(i)
+            out1 = 'out' + str(i)
+            relu = 'relu' + str(i)
+            w = self.params[w_ind]
+            b = self.params[b_ind]
+            
+            loss += ((0.5 * self.reg * np.sum(w*w)) )
+            if(i == self.num_layers):        
+                dx, grads[w_ind], grads[b_ind] = affine_backward(dsoft,self.cache_dict[out1])
+            else:
+                dx_relu = relu_backward(dx,self.cache_dict[relu])
+                dx, grads[w_ind], grads[b_ind] = affine_backward(dx_relu,self.cache_dict[out1])
+                
+            grads[w_ind] += self.reg * self.params[w_ind]
         #######################################################################
         #                             END OF YOUR CODE                        #
         #######################################################################
